@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login / Signup</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #74b9ff, #0984e3);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .container {
+      background: #fff;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      width: 320px;
+      text-align: center;
+    }
+    h2 { margin-bottom: 20px; }
+    input {
+      width: 90%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #0984e3;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover { background: #74b9ff; }
+    .toggle, .forgot {
+      margin-top: 15px;
+      font-size: 14px;
+      cursor: pointer;
+      color: #0984e3;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2 id="formTitle">Sign In</h2>
+    <input type="text" id="username" placeholder="Username" required>
+    <input type="password" id="password" placeholder="Password" required>
+    <button onclick="handleSubmit()">Sign In</button>
+    <div class="toggle" onclick="toggleForm()">Don’t have an account? Sign Up</div>
+    <div class="forgot" onclick="toggleForgot()">Forgot Password?</div>
+    <p id="message" style="color:red;"></p>
+  </div>
+
+  <script>
+    let isSignUp = false;
+    let isForgot = false;
+
+    async function hashPassword(password) {
+      const msgBuffer = new TextEncoder().encode(password);
+      const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+    }
+
+    function toggleForm() {
+      isSignUp = !isSignUp;
+      isForgot = false;
+      updateUI();
+    }
+
+    function toggleForgot() {
+      isForgot = !isForgot;
+      isSignUp = false;
+      updateUI();
+    }
+
+    function updateUI() {
+      document.getElementById("formTitle").innerText = 
+        isSignUp ? "Sign Up" : isForgot ? "Reset Password" : "Sign In";
+      document.querySelector("button").innerText = 
+        isSignUp ? "Sign Up" : isForgot ? "Reset" : "Sign In";
+      document.querySelector(".toggle").style.display = isForgot ? "none" : "block";
+      document.querySelector(".forgot").innerText = isForgot ? "Back to Sign In" : "Forgot Password?";
+      document.getElementById("message").innerText = "";
+    }
+
+    async function handleSubmit() {
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value.trim();
+      let users = JSON.parse(localStorage.getItem("users")) || {};
+
+      const hashed = await hashPassword(password);
+
+      if (isSignUp) {
+        if (users[username]) {
+          document.getElementById("message").innerText = "Username already exists!";
+        } else {
+          users[username] = hashed;
+          localStorage.setItem("users", JSON.stringify(users));
+          alert("Account created! Please login.");
+          isSignUp = false;
+          updateUI();
+        }
+      } else if (isForgot) {
+        if (users[username]) {
+          users[username] = hashed;
+          localStorage.setItem("users", JSON.stringify(users));
+          alert("Password reset successful! Please login.");
+          isForgot = false;
+          updateUI();
+        } else {
+          document.getElementById("message").innerText = "Username not found!";
+        }
+      } else {
+        if (users[username] && users[username] === hashed) {
+          localStorage.setItem("loggedInUser", username);
+          window.location.href = "index.html";
+        } else {
+          document.getElementById("message").innerText = "Invalid username or password!";
+        }
+      }
+    }
+  </script>
+</body>
+</html>
