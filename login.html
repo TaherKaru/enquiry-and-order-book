@@ -1,135 +1,159 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login / Signup</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: linear-gradient(135deg, #74b9ff, #0984e3);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      margin: 0;
-    }
-    .container {
-      background: #fff;
-      padding: 30px;
-      border-radius: 15px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      width: 320px;
-      text-align: center;
-    }
-    h2 { margin-bottom: 20px; }
-    input {
-      width: 90%;
-      padding: 10px;
-      margin: 10px 0;
-      border-radius: 8px;
-      border: 1px solid #ccc;
-    }
-    button {
-      width: 100%;
-      padding: 10px;
-      background: #0984e3;
-      border: none;
-      border-radius: 8px;
-      color: #fff;
-      font-size: 16px;
-      cursor: pointer;
-      margin-top: 10px;
-    }
-    button:hover { background: #74b9ff; }
-    .toggle, .forgot {
-      margin-top: 15px;
-      font-size: 14px;
-      cursor: pointer;
-      color: #0984e3;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Goodluck Stores - Auth</title>
+<style>
+body {
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+  background: linear-gradient(135deg,#f0f4f8,#d9eaf7);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+  margin:0;
+}
+.auth-container {
+  background:white;
+  padding:30px 40px;
+  border-radius:15px;
+  box-shadow:0 8px 20px rgba(0,0,0,0.2);
+  width:100%;
+  max-width:400px;
+}
+.auth-container h2 {
+  text-align:center;
+  margin-bottom:20px;
+  color:#00796B;
+}
+.auth-container label { display:block; margin-top:12px; font-weight:bold; }
+.auth-container input { width:100%; padding:10px; margin-top:6px; border:1px solid #ccc; border-radius:8px; font-size:14px; }
+.auth-container button { margin-top:20px; width:100%; padding:12px; background:#00796B; color:white; font-weight:bold; border:none; border-radius:8px; cursor:pointer; font-size:16px; transition:0.3s; }
+.auth-container button:hover { background:#004d40; }
+.auth-container .error-msg { color:red; margin-top:10px; text-align:center; display:none; }
+.auth-container .switch-btn { background:#FF9800; margin-top:10px; }
+.auth-container .forgot-btn { background:#0288D1; margin-top:5px; }
+</style>
 </head>
 <body>
-  <div class="container">
-    <h2 id="formTitle">Sign In</h2>
-    <input type="text" id="username" placeholder="Username" required>
-    <input type="password" id="password" placeholder="Password" required>
-    <button onclick="handleSubmit()">Sign In</button>
-    <div class="toggle" onclick="toggleForm()">Don’t have an account? Sign Up</div>
-    <div class="forgot" onclick="toggleForgot()">Forgot Password?</div>
-    <p id="message" style="color:red;"></p>
-  </div>
 
-  <script>
-    let isSignUp = false;
-    let isForgot = false;
+<div class="auth-container">
+  <h2 id="authTitle">Sign In</h2>
 
-    async function hashPassword(password) {
-      const msgBuffer = new TextEncoder().encode(password);
-      const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+  <form id="authForm">
+    <label>Email</label>
+    <input type="email" id="email" required placeholder="Enter email">
+    <label>Password</label>
+    <input type="password" id="password" required placeholder="Enter password">
+    <button type="submit" id="authBtn">Sign In</button>
+  </form>
+
+  <button class="switch-btn" id="switchBtn">Create Account</button>
+  <button class="forgot-btn" id="forgotBtn">Forgot Password?</button>
+  <div class="error-msg" id="errorMsg"></div>
+  <div class="error-msg" id="successMsg" style="color:green;"></div>
+</div>
+
+<script type="module">
+  // 1️⃣ Import Firebase modular SDK
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+
+  // 2️⃣ Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyAdx4Q8LPLwTxdR6pC_BJ7db_ZKXx71ayc",
+    authDomain: "goodluck-stores.firebaseapp.com",
+    projectId: "goodluck-stores",
+    storageBucket: "goodluck-stores.firebasestorage.app",
+    messagingSenderId: "1013775003230",
+    appId: "1:1013775003230:web:77f5f643431bb69549cecf",
+    measurementId: "G-KSRTDV1BLQ"
+  };
+
+  // 3️⃣ Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+
+  // 4️⃣ DOM elements
+  let isSignUp = false;
+  const authForm = document.getElementById("authForm");
+  const authTitle = document.getElementById("authTitle");
+  const authBtn = document.getElementById("authBtn");
+  const switchBtn = document.getElementById("switchBtn");
+  const forgotBtn = document.getElementById("forgotBtn");
+  const errorMsg = document.getElementById("errorMsg");
+  const successMsg = document.getElementById("successMsg");
+
+  // 5️⃣ Toggle Sign In / Sign Up
+  switchBtn.addEventListener("click", () => {
+    isSignUp = !isSignUp;
+    authTitle.textContent = isSignUp ? "Create Account" : "Sign In";
+    authBtn.textContent = isSignUp ? "Sign Up" : "Sign In";
+    switchBtn.textContent = isSignUp ? "Already have an account?" : "Create Account";
+    errorMsg.style.display = "none";
+    successMsg.style.display = "none";
+  });
+
+  // 6️⃣ Forgot password
+  forgotBtn.addEventListener("click", () => {
+    const email = document.getElementById("email").value;
+    if(!email) {
+      errorMsg.style.display = "block";
+      errorMsg.textContent = "Please enter your email to reset password.";
+      return;
     }
+    sendPasswordResetEmail(auth, email)
+      .then(() => {
+        successMsg.style.display = "block";
+        successMsg.textContent = "Password reset email sent!";
+        errorMsg.style.display = "none";
+      })
+      .catch(err => {
+        errorMsg.style.display = "block";
+        errorMsg.textContent = err.message;
+        successMsg.style.display = "none";
+        console.error(err);
+      });
+  });
 
-    function toggleForm() {
-      isSignUp = !isSignUp;
-      isForgot = false;
-      updateUI();
+  // 7️⃣ Handle Sign In / Sign Up form submission
+  authForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
+
+    if(isSignUp){
+      // Sign Up
+      createUserWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+          console.log("Account created:", userCredential.user);
+          localStorage.setItem("loggedInUser", email);
+          window.location.href = "index.html"; // redirect after signup
+        })
+        .catch(err => {
+          errorMsg.style.display = "block";
+          errorMsg.textContent = err.message;
+          successMsg.style.display = "none";
+          console.error(err);
+        });
+    } else {
+      // Sign In
+      signInWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+          console.log("Signed in:", userCredential.user);
+          localStorage.setItem("loggedInUser", email);
+          window.location.href = "index.html"; // redirect after signin
+        })
+        .catch(err => {
+          errorMsg.style.display = "block";
+          errorMsg.textContent = err.message;
+          successMsg.style.display = "none";
+          console.error(err);
+        });
     }
+  });
+</script>
 
-    function toggleForgot() {
-      isForgot = !isForgot;
-      isSignUp = false;
-      updateUI();
-    }
-
-    function updateUI() {
-      document.getElementById("formTitle").innerText = 
-        isSignUp ? "Sign Up" : isForgot ? "Reset Password" : "Sign In";
-      document.querySelector("button").innerText = 
-        isSignUp ? "Sign Up" : isForgot ? "Reset" : "Sign In";
-      document.querySelector(".toggle").style.display = isForgot ? "none" : "block";
-      document.querySelector(".forgot").innerText = isForgot ? "Back to Sign In" : "Forgot Password?";
-      document.getElementById("message").innerText = "";
-    }
-
-    async function handleSubmit() {
-      const username = document.getElementById("username").value.trim();
-      const password = document.getElementById("password").value.trim();
-      let users = JSON.parse(localStorage.getItem("users")) || {};
-
-      const hashed = await hashPassword(password);
-
-      if (isSignUp) {
-        if (users[username]) {
-          document.getElementById("message").innerText = "Username already exists!";
-        } else {
-          users[username] = hashed;
-          localStorage.setItem("users", JSON.stringify(users));
-          alert("Account created! Please login.");
-          isSignUp = false;
-          updateUI();
-        }
-      } else if (isForgot) {
-        if (users[username]) {
-          users[username] = hashed;
-          localStorage.setItem("users", JSON.stringify(users));
-          alert("Password reset successful! Please login.");
-          isForgot = false;
-          updateUI();
-        } else {
-          document.getElementById("message").innerText = "Username not found!";
-        }
-      } else {
-        if (users[username] && users[username] === hashed) {
-          localStorage.setItem("loggedInUser", username);
-          window.location.href = "index.html";
-        } else {
-          document.getElementById("message").innerText = "Invalid username or password!";
-        }
-      }
-    }
-  </script>
 </body>
 </html>
