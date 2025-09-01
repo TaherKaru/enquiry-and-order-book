@@ -101,7 +101,18 @@ let currentModalKey="";
 <label>Email</label><input type="email" id="enqEmail">
 <label>Enquiry Details</label><textarea id="enqDetails" required></textarea>
 <label>Remarks</label><textarea id="enqRemarks"></textarea>
-<label>Tags</label><input type="text" id="enqTags" placeholder="VIP, Follow-up etc">
+<label>Tags</label>
+<input type="text" id="enqTags" placeholder="VIP, Follow-up etc">
+<select id="enqTagDropdown" onchange="if(this.value){ document.getElementById('enqTags').value = this.value; }">
+  <option value="">-- Select Service --</option>
+  <option value="Glass items">Glass items</option>
+  <option value="Glass Cutting">Glass Cutting</option>
+  <option value="Rubber Stamp">Rubber Stamp</option>
+  <option value="Nameplate">Nameplate</option>
+  <option value="Photoframe">Photoframe</option>
+  <option value="Frame Glass/Repairing">Frame Glass/Repairing</option>
+  <option value="Miscellaneous">Miscellaneous</option>
+</select>
 <label>Status</label>
 <select id="enqStatus">
 <option value="Pending">Pending</option>
@@ -120,7 +131,18 @@ let currentModalKey="";
 <label>Phone Number</label><input type="text" id="ordPhone" required>
 <label>Email</label><input type="email" id="ordEmail">
 <label>Order Details</label><textarea id="ordDetails" required></textarea>
-<label>Tags</label><input type="text" id="ordTags" placeholder="VIP, Custom etc">
+<label>Tags</label>
+<input type="text" id="ordTags" placeholder="VIP, Custom etc">
+<select id="ordTagDropdown" onchange="if(this.value){ document.getElementById('ordTags').value = this.value; }">
+  <option value="">-- Select Service --</option>
+  <option value="Glass items">Glass items</option>
+  <option value="Glass Cutting">Glass Cutting</option>
+  <option value="Rubber Stamp">Rubber Stamp</option>
+  <option value="Nameplate">Nameplate</option>
+  <option value="Photoframe">Photoframe</option>
+  <option value="Frame Glass/Repairing">Frame Glass/Repairing</option>
+  <option value="Miscellaneous">Miscellaneous</option>
+</select>
 <label>Status</label>
 <select id="ordStatus">
 <option value="Pending">Pending</option>
@@ -130,9 +152,11 @@ let currentModalKey="";
 <button type="submit">Save Order</button>
 <button type="button" class="export-btn" onclick="exportData('orders')">Export Orders</button>
 <button type="button" class="record-btn" onclick="openModal('orders')">View Records</button>
+<!-- Auto Fill Button -->
+<button type="button" class="record-btn" onclick="openAutoFillModal()">Auto Fill from Enquiry</button>
 </form>
 
-<!-- Modal -->
+<!-- Main Modal -->
 <div id="recordModal" class="modal">
 <div class="modal-content">
 <span class="close-btn" onclick="closeModal()">&times;</span>
@@ -142,6 +166,17 @@ let currentModalKey="";
 <button onclick="printRecords()">Print Records</button>
 </div>
 </div>
+
+<!-- Auto Fill Modal -->
+<div id="autoFillModal" class="modal">
+<div class="modal-content">
+<span class="close-btn" onclick="closeAutoFillModal()">&times;</span>
+<h3>Choose Enquiry to Auto Fill</h3>
+<input type="text" id="autoFillSearch" class="search-box" placeholder="Search enquiries..." onkeyup="filterAutoFillRecords()">
+<div id="autoFillBody"></div>
+</div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -203,7 +238,50 @@ function openWhatsApp(phone,name){ const msg=`Dear ${name},\n\nThank you for you
 function openEmail(email,name){ const msg=`Dear ${name},\n\nThank you for your enquiry.\n\nOur team shall get back to you soon.\n\nRegards\nMustafa Karu\nProprietor\nGoodluck Stores`; window.location.href=`mailto:${email}?subject=Enquiry&body=${encodeURIComponent(msg)}`; }
 function printRecords(){ let div=document.getElementById("modalBody").innerHTML; let w=window.open(); w.document.write('<html><head><title>Records</title></head><body>'+div+'</body></html>'); w.print(); w.close(); }
 
-window.onclick = e => { if (e.target == document.getElementById("recordModal")) { closeModal(); } };
+// Auto Fill Modal Functions
+function openAutoFillModal(){
+    document.getElementById("autoFillModal").style.display="block";
+    renderAutoFillRecords();
+}
+function closeAutoFillModal(){ document.getElementById("autoFillModal").style.display="none"; }
+function renderAutoFillRecords(){
+    const body = document.getElementById("autoFillBody");
+    body.innerHTML = "";
+    if(!enquiries.length){ body.innerHTML="<p>No enquiries!</p>"; return; }
+    enquiries.forEach((r,i)=>{
+        let card = document.createElement("div");
+        card.className = "record-card";
+        card.style.cursor = "pointer";
+        card.onclick = ()=>{ fillOrderFromEnquiry(r); closeAutoFillModal(); toast("Order form auto-filled!"); };
+        card.innerHTML = `<div><span class="card-header">Enquiry No:</span> ${r.enqNo}</div>
+                          <div><span class="card-header">Name:</span> ${r.name}</div>
+                          <div><span class="card-header">Phone:</span> ${r.phone}</div>
+                          <div><span class="card-header">Email:</span> ${r.email}</div>
+                          <div><span class="card-header">Tags:</span> ${r.tags}</div>
+                          <div><span class="card-header">Details:</span> ${r.details}</div>`;
+        body.appendChild(card);
+    });
+}
+function filterAutoFillRecords(){
+    const q = document.getElementById("autoFillSearch").value.toLowerCase();
+    document.querySelectorAll("#autoFillBody .record-card").forEach(c=>{
+        c.style.display = c.innerText.toLowerCase().includes(q) ? "block" : "none";
+    });
+}
+function fillOrderFromEnquiry(enq){
+    ordName.value = enq.name;
+    ordPhone.value = enq.phone;
+    ordEmail.value = enq.email;
+    ordDetails.value = enq.details;
+    ordTags.value = enq.tags;
+    ordStatus.value = "Pending";
+}
+
+// Close modals on outside click
+window.onclick = e => { 
+    if (e.target == document.getElementById("recordModal")) { closeModal(); }
+    if (e.target == document.getElementById("autoFillModal")) { closeAutoFillModal(); }
+};
 
 // Initialize Page
 window.onload = () => { generateEnquiryNo(); setTodayDate(); updateDashboard(); };
@@ -211,3 +289,4 @@ window.onload = () => { generateEnquiryNo(); setTodayDate(); updateDashboard(); 
 
 </body>
 </html>
+
